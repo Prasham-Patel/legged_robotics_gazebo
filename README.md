@@ -50,3 +50,4 @@ I'd like to make all the 3D models open-source, so that anybody can build this r
 
 ## Credits
  - mike4192: https://github.com/mike4192/spotMicro
+ - https://github.com/lnotspotl/notspot_sim_py
