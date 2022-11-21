@@ -45,6 +45,11 @@ class TrotGaitController(GaitController):
         #                                     kp    ki    kd
         self.pid_controller = PID_controller(0.15, 0.02, 0.002)
 
+    def update_from_trajectory_state_command(self, velocity_command, yaw_rate_command, state, command):
+        command.velocity[0] = velocity_command[0]
+        command.velocity[1] = velocity_command[1]
+        command.yaw_rate = yaw_rate_command
+
     def updateStateCommand(self, msg, state, command):
         command.velocity[0] = msg.axes[4] * self.max_x_velocity
         command.velocity[1] = msg.axes[3] * self.max_y_velocity

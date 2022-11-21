@@ -3,7 +3,7 @@ from math import atan, sin, cos, pi
 from matplotlib import pyplot as plt
 import copy
 
-class trajectory():
+class Trajectory():
 
     def __init__(self, xi, xf, vi, vf, t0, tf):
         self.xi  = xi
@@ -37,9 +37,27 @@ class trajectory():
         x_dot = np.dot(T_d2, self.x_Co_ef)
         return x, x_dot
 
+class trajectory_controller():
+
+    def __init__(self, kp):
+        self.kp = kp # control constant
+        self.current_pose = None
+        self.previous_pose = None
+        self.target_pose = None
+
+    def update_state(self, new_pose):
+        self.previous_pose = self.current_pose
+        self.current_pose = new_pose
+
+    def update_target(self, new_target):
+        self.target_pose = new_target
+
+    def get_velocity_command(self):
+        return (self.target_pose - self.current_pose)*self.kp
+
 if __name__ == '__main__':
 
-    primitive = trajectory(0, 1, 0, 0, 0, 1)
+    primitive = Trajectory(0, 1, 0, 0, 0, 1)
     pos_x = []
     pos_y = []
     time = []

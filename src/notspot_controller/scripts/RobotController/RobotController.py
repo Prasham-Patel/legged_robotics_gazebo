@@ -37,9 +37,20 @@ class Robot(object):
         self.state.foot_locations = self.default_stance
         self.command = Command(self.default_height)
 
+    def use_trot_gait(self):
+        if self.state.behavior_state == BehaviorState.REST:
+            self.state.behavior_state = BehaviorState.TROT
+        self.currentController= self.trotGaitController
+        self.currentController.pid_controller.reset()
+
+    def trajectory_controller_command(self, velocity_command, yaw_rate_command):
+        # velocity command needs to be in form [vx, vy]
+        self.currentController.update_from_trajectory_state_command(velocity_command, yaw_rate_command, self.state, self.command)
+
     def change_controller(self):
         
         if self.command.trot_event:
+            print("trot event")
             if self.state.behavior_state == BehaviorState.REST:
                 self.state.behavior_state = BehaviorState.TROT
                 self.currentController = self.trotGaitController
@@ -48,6 +59,7 @@ class Robot(object):
             self.command.trot_event = False
 
         elif self.command.crawl_event:
+            print("crawl event")
             if self.state.behavior_state == BehaviorState.REST:
                 self.state.behavior_state = BehaviorState.CRAWL
                 self.currentController = self.crawlGaitController
@@ -56,12 +68,14 @@ class Robot(object):
             self.command.crawl_event = False
 
         elif self.command.stand_event:
+            print("stand event")
             if self.state.behavior_state == BehaviorState.REST:
                 self.state.behavior_state = BehaviorState.STAND
                 self.currentController = self.standController
             self.command.stand_event = False
 
         elif self.command.rest_event:
+            print("rest event")
             self.state.behavior_state = BehaviorState.REST
             self.currentController = self.restController
             self.currentController.pid_controller.reset()

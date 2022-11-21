@@ -22,6 +22,9 @@ class StandController(object):
         self.FL_X = msg.axes[4]
         self.FL_Y = msg.axes[3]
 
+    def update_from_trajectory_state_command(self, velocity_command, yaw_rate_comomnad, state, command):
+        print("WRONG CONTROLLER | USE TROT GAIT CONTROLLER")
+
     @property
     def default_stance(self):
         a = np.copy(self.def_stance)

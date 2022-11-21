@@ -38,6 +38,9 @@ class RestController(object):
             if not (msg.buttons[7]):
                 self.use_button = True
 
+    def update_from_trajectory_state_command(self, velocity_command, yaw_rate_comomnad, state, command):
+        print("WRONG CONTROLLER | USE TROT GAIT CONTROLLER")
+
     @property
     def default_stance(self):
         return self.def_stance
