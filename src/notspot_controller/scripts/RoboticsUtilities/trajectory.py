@@ -55,6 +55,8 @@ class trajectory_controller():
     def get_velocity_command(self):
         return (self.target_pose - self.current_pose)*self.kp
 
+    def current_error(self):
+        return (self.target_pose - self.current_pose)
 if __name__ == '__main__':
 
     primitive = Trajectory(0, 1, 0, 0, 0, 1)
