@@ -8,7 +8,7 @@ import numpy as np
 from math import pi
 
 from sensor_msgs.msg import Joy,Imu
-from RobotController import RobotController
+from RobotController import RobotController, gait_generator
 from InverseKinematics import robot_IK
 from RoboticsUtilities import trajectory, Transformations
 from std_msgs.msg import Float64
@@ -55,6 +55,7 @@ robot_velocity_control_y = trajectory.trajectory_controller(kp)
 robot_yaw_control = trajectory.trajectory_controller(kp)
 
 # initialize robot gait controller
+robot_gait = gait_generator.gait_generator()
 notspot_robot = RobotController.Robot(body, legs, USE_IMU)
 inverseKinematics = robot_IK.InverseKinematics(body, legs)
 
@@ -79,7 +80,6 @@ if USE_IMU:
     rospy.Subscriber("notspot_imu/base_link_orientation",Imu,notspot_robot.imu_orientation)
 
 rospy.Subscriber("/gazebo/model_states", ModelStates, get_robot_states)
-# rospy.Subscriber("/gazebo/clock", clock, get_time)
 rospy.Subscriber("notspot_joy/joy_ramped",Joy,notspot_robot.joystick_command)
 
 rate = rospy.Rate(RATE)
@@ -100,7 +100,8 @@ while not rospy.is_shutdown():
     # get current_trajectory time
     current_trajectory_time = rospy.get_time() - start_time
 
-    if not robot_velocity_control_x.current_pose == None and not robot_velocity_control_y.current_pose == None:
+    if not robot_velocity_control_x.current_pose == None and \
+            not robot_velocity_control_y.current_pose == None:
         robot_orientation = robot_state.orientation
         rot = Rotation.from_quat([robot_orientation.x, robot_orientation.y, robot_orientation.z, robot_orientation.w])
         robot_yaw_control.update_state(rot.as_euler("xyz", degrees=False)[2])
@@ -126,6 +127,8 @@ while not rospy.is_shutdown():
                 robot_yaw_control.current_error() < 0.05:
             velocity_command = [0, 0, 0]
             yaw_rate_command = 0
+
+        # leg_positions = robot_gait.update_velocity_commands(current_trajectory_time, velocity_command, yaw_rate_command, notspot_robot.default_stance())
 
         notspot_robot.trajectory_controller_command(velocity_command[:2], yaw_rate_command)
 
