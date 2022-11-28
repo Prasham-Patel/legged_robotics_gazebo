@@ -35,6 +35,8 @@ class Trajectory():
         T_d2 = np.matrix([0, 1, 2*T, 3*T**2])
         x = np.dot(T_d1, self.x_Co_ef)
         x_dot = np.dot(T_d2, self.x_Co_ef)
+        x = x.astype(float)
+        x = float(x)
         return x, x_dot
 
 class trajectory_controller():

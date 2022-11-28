@@ -1,7 +1,7 @@
 <launch>
 
-    <!-- Gazebo Simulation -->
-    <include file="$(find notspot_gazebo)/launch/simulation.launch" />
+<!--      --><!-- Gazebo Simulation -->
+<!--     <include file="$(find notspot_gazebo)/launch/simulation.launch" /> -->
 
     <!-- Robot Controller -->
     <include 

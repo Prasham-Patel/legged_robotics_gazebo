@@ -2,14 +2,12 @@
 import time
 
 import rospy
-# from rospy import time
 from scipy.spatial.transform import Rotation
 import numpy as np
 from math import pi
 
-from sensor_msgs.msg import Joy,Imu
-from RobotController import RobotController, gait_generator
-from InverseKinematics import robot_IK
+from RobotController import gait_generator
+from InverseKinematics import leg_IK
 from RoboticsUtilities import trajectory, Transformations
 from std_msgs.msg import Float64
 from gazebo_msgs.msg import ModelStates
@@ -21,9 +19,6 @@ def get_robot_states(msg):
     robot_state = msg.pose[msg.name.index("notspot_gazebo")]
     robot_velocity_control_x.update_state(robot_state.position.x)
     robot_velocity_control_y.update_state(robot_state.position.y)
-
-def get_time(msg):
-    print(msg)
 
 USE_IMU = True
 RATE = 60
@@ -38,9 +33,9 @@ legs = [0.0, 0.04, 0.100, 0.094333]
 robot_state = None
 
 # way points, keeping staring and ending velocity 0
-waypoints = [[0, 0], [2, -2]]
+waypoints = [[0, 0], [1, 0]]
 direction = [[0, 0], [0, 0]]
-yaw = [0, pi/4]
+yaw = [0, 0]
 trajectory_time = 20 # in secs
 
 # initialize trajectory
@@ -50,14 +45,16 @@ robot_trajectory_yaw = trajectory.Trajectory(yaw[0], yaw[1], 0, 0, 0, trajectory
 
 #initialize controller
 kp = 0.1
-robot_velocity_control_x = trajectory.trajectory_controller(kp)
-robot_velocity_control_y = trajectory.trajectory_controller(kp)
-robot_yaw_control = trajectory.trajectory_controller(kp)
+robot_velocity_control_x = trajectory.trajectory_controller(kp*3)
+robot_velocity_control_y = trajectory.trajectory_controller(kp*0.5)
+robot_yaw_control = trajectory.trajectory_controller(0.00)
 
 # initialize robot gait controller
-robot_gait = gait_generator.gait_generator()
-notspot_robot = RobotController.Robot(body, legs, USE_IMU)
-inverseKinematics = robot_IK.InverseKinematics(body, legs)
+beta = 0.75
+t_cycle = 1.0
+robot_height = 0.15
+robot_leg = leg_IK.robot_leg(legs)
+robot_gait = gait_generator.gait_generator(beta, t_cycle, robot_height, robot_leg)
 
 command_topics = ["/notspot_controller/FR1_joint/command",
                   "/notspot_controller/FR2_joint/command",
@@ -76,11 +73,7 @@ publishers = []
 for i in range(len(command_topics)):
     publishers.append(rospy.Publisher(command_topics[i], Float64, queue_size = 0))
 
-if USE_IMU:
-    rospy.Subscriber("notspot_imu/base_link_orientation",Imu,notspot_robot.imu_orientation)
-
 rospy.Subscriber("/gazebo/model_states", ModelStates, get_robot_states)
-rospy.Subscriber("notspot_joy/joy_ramped",Joy,notspot_robot.joystick_command)
 
 rate = rospy.Rate(RATE)
 
@@ -90,18 +83,21 @@ del command_topics
 del USE_IMU
 del RATE
 
+# current simulation time as trajectory start time
 start_time = rospy.get_time()
-notspot_robot.use_trot_gait()
+# time allowed to get gazebo setup
+settling_time = 3
 
 while not rospy.is_shutdown():
-    leg_positions = notspot_robot.run()
-    # notspot_robot.change_controller()
 
     # get current_trajectory time
-    current_trajectory_time = rospy.get_time() - start_time
+    current_trajectory_time = rospy.get_time() - start_time - settling_time
+    print("current time", current_trajectory_time)
+    if (not robot_velocity_control_x.current_pose == None and
+            not robot_velocity_control_y.current_pose == None )\
+            and current_trajectory_time > 0:
 
-    if not robot_velocity_control_x.current_pose == None and \
-            not robot_velocity_control_y.current_pose == None:
+        print("current_body_pos", robot_state.position.x, robot_state.position.y)
         robot_orientation = robot_state.orientation
         rot = Rotation.from_quat([robot_orientation.x, robot_orientation.y, robot_orientation.z, robot_orientation.w])
         robot_yaw_control.update_state(rot.as_euler("xyz", degrees=False)[2])
@@ -118,8 +114,10 @@ while not rospy.is_shutdown():
         yaw_rate_command = robot_yaw_control.get_velocity_command()
         # yaw_rate_command = 0
 
-        velocity_command = np.matmul(Transformations.rotz(rot.as_euler("xyz", degrees=False)[2]), np.asarray([[vel_command_x], [vel_command_y], [0]]))
+        velocity_command = np.asarray(np.matmul(Transformations.rotz(rot.as_euler("xyz", degrees=False)[2]), np.asarray([[vel_command_x], [vel_command_y], [0]])))
+        velocity_command = velocity_command.astype(float)
         print(rot.as_euler("xyz", degrees=False))
+        velocity_command = np.asarray([[vel_command_x], [vel_command_y], [0]])
 
         if current_trajectory_time > trajectory_time and \
                 robot_velocity_control_x.current_error() < 0.05 and \
@@ -127,27 +125,20 @@ while not rospy.is_shutdown():
                 robot_yaw_control.current_error() < 0.05:
             velocity_command = [0, 0, 0]
             yaw_rate_command = 0
+        print("velocity command", velocity_command)
+        velocity_command = np.asarray([[0.1], [0], [0]])
+        joint_angles = robot_gait.run(current_trajectory_time, velocity_command, yaw_rate_command)
+    else:
+        print("stance")
+        joint_angles = robot_gait.run(-1, np.asarray([0, 0]), 0)
 
-        # leg_positions = robot_gait.update_velocity_commands(current_trajectory_time, velocity_command, yaw_rate_command, notspot_robot.default_stance())
+    # try:
+    # joint_angles = [0, pi/2, 0, 0, pi/2, 0, 0, pi/2, 0, 0, pi/2, 0]
+    print("angles", joint_angles)
 
-        notspot_robot.trajectory_controller_command(velocity_command[:2], yaw_rate_command)
-
-
-    dx = notspot_robot.state.body_local_position[0]
-    dy = notspot_robot.state.body_local_position[1]
-    dz = notspot_robot.state.body_local_position[2]
-    
-    roll = notspot_robot.state.body_local_orientation[0]
-    pitch = notspot_robot.state.body_local_orientation[1]
-    yaw = notspot_robot.state.body_local_orientation[2]
-
-    try:
-        joint_angles = inverseKinematics.inverse_kinematics(leg_positions,
-                               dx, dy, dz, roll, pitch, yaw)
-
-        for i in range(len(joint_angles)):
-            publishers[i].publish(joint_angles[i])
-    except:
-        pass
+    for i in range(len(joint_angles)):
+        publishers[i].publish(joint_angles[i])
+    # except Exception as e:
+    #     print(e)
 
     rate.sleep()
