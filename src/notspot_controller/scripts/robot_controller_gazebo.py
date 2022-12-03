@@ -21,7 +21,7 @@ def get_robot_states(msg):
     robot_velocity_control_y.update_state(robot_state.position.y)
 
 USE_IMU = True
-RATE = 120
+RATE = 240
 
 rospy.init_node("Robot_Controller")
 
@@ -51,7 +51,7 @@ robot_yaw_control = trajectory.trajectory_controller(0.00)
 
 # initialize robot gait generator
 beta = 0.75
-t_cycle = 2
+t_cycle = 0.4
 robot_height = 0.15
 robot_leg = leg_IK.robot_leg(legs)
 robot_gait = gait_generator.gait_generator(beta, t_cycle, robot_height, body, robot_leg)
@@ -127,8 +127,8 @@ while not rospy.is_shutdown():
             velocity_command = [0, 0, 0]
             yaw_rate_command = 0
         print("velocity command", velocity_command)
-        # velocity_command = np.asarray([[0], [0], [0]])
-        # yaw_rate_command = 0.3
+        # velocity_command = np.asarray([[0.3], [0], [0]])
+        yaw_rate_command = 0.0
         joint_angles = robot_gait.run(current_trajectory_time, velocity_command, yaw_rate_command)
     else:
         print("stance")

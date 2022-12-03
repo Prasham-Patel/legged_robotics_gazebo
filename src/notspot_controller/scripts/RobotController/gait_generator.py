@@ -2,6 +2,7 @@
 
 from RoboticsUtilities import trajectory
 from RoboticsUtilities import Transformations
+from InverseKinematics import leg_IK
 from math import floor
 import numpy as np
 
@@ -58,6 +59,7 @@ class gait_generator():
         else:
             leg_pos = self.get_leg_pos(sim_time, yaw_rate_command)
             leg_pos = self.get_leg_rotation_offset(leg_pos, yaw_rate_command)
+            print("rotated", leg_pos)
             angles = []
             for i in range(0, 4):
                 # if i == 1 or i == 3:
@@ -131,7 +133,7 @@ class gait_generator():
             start_phase = start_phase + cycle_number
             end_phase = end_phase + cycle_number
 
-            l_swing = self.l_stride
+            l_swing = self.l_stride*self.beta
             # l_swing[0] = min(0.05, abs(l_swing[0]))*np.sign(l_swing[0])
             # l_swing[1] = min(0.05, abs(l_swing[1]))*np.sign(l_swing[1])
 
@@ -142,48 +144,69 @@ class gait_generator():
             t3 = self.t_cycle*end_phase - self.t_cycle*self.leg_raise_time
             t4 = self.t_cycle*end_phase
 
+            print("gait trajectory")
+            print(self.kinematic_phase)
+            print(t1, t2, t3, t4)
+
             if sim_time < t1:
                 print("phase T1")
-                y = 0
-                x = 0
-                z = 0
+                y = (-l_swing[1] / (self.t_cycle)) * (sim_time % self.t_cycle)
+                x = (-l_swing[0] / (self.t_cycle)) * (sim_time % self.t_cycle)
+                z = self.robot_height
 
             if sim_time >= t1 and sim_time < t2:
                 print("phase T2")
-                x = 0
-                y = 0
+                x = (-l_swing[0] / (self.t_cycle)) * (sim_time % self.t_cycle)
+                y = (-l_swing[1] / (self.t_cycle)) * (sim_time % self.t_cycle)
                 z_traj = trajectory.Trajectory(0, leg_raise_height, 0, leg_vz, t1, t2)
-                z = z_traj.at_time(sim_time)[0]
+                z = self.robot_height - z_traj.at_time(sim_time)[0]
 
             if sim_time >= t2 and sim_time <= t3:
                 print("phase T3")
-                x_traj = trajectory.Trajectory(0, l_swing[0], 0, 0, t2, t3)
-                y_traj = trajectory.Trajectory(0, l_swing[1], 0, 0, t2, t3)
+                x_traj = trajectory.Trajectory((-l_swing[0] / self.t_cycle) * (t2 % self.t_cycle), ((-l_swing[0] / self.t_cycle) * (t2 % self.t_cycle)) + l_swing[0], 0, 0, t2, t3)
+                y_traj = trajectory.Trajectory((-l_swing[1] / self.t_cycle) * (t2 % self.t_cycle), ((-l_swing[1] / self.t_cycle) * (t2 % self.t_cycle) )+ l_swing[1], 0, 0, t2, t3)
                 z_traj = trajectory.Trajectory(leg_raise_height, leg_raise_height, leg_vz, -leg_vz, t2, t3)
 
                 x = x_traj.at_time(sim_time)[0]
                 y = y_traj.at_time(sim_time)[0]
-                z = z_traj.at_time(sim_time)[0]
+                z = self.robot_height - z_traj.at_time(sim_time)[0]
 
             if sim_time >= t3 and sim_time <= t4:
                 print("phase T4")
-                x = l_swing[0]
-                y = l_swing[1]
+                x = ((-l_swing[0] / (self.t_cycle)) * (t2 % self.t_cycle)) + l_swing[0] + ((-l_swing[0] / (self.t_cycle)) * ((sim_time - t2) % self.t_cycle))
+                y = ((-l_swing[1] / (self.t_cycle)) * (t2 % self.t_cycle)) + l_swing[1] + ((-l_swing[1] / (self.t_cycle)) * ((sim_time - t2) % self.t_cycle))
+
                 z_traj = trajectory.Trajectory(leg_raise_height, 0, -leg_vz, 0, t3, t4)
-                z = z_traj.at_time(sim_time)[0]
+                z = self.robot_height - z_traj.at_time(sim_time)[0]
 
             if sim_time > t4:
                 print("phase T5")
-                x = l_swing[0]
-                y = l_swing[1]
-                z = 0
-            print("answer", x, y, z)
-            x_offset = (-l_swing[0]/self.t_cycle)*(sim_time%self.t_cycle)
-            y_offset = (-l_swing[1]/self.t_cycle)*(sim_time%self.t_cycle)
-            z_offset = self.robot_height
+                x = ((-l_swing[0] / (self.t_cycle)) * (t2 % self.t_cycle)) + l_swing[0] + (
+                            (-l_swing[0] / (self.t_cycle)) * ((sim_time - t2) % self.t_cycle))
+                y = ((-l_swing[1] / (self.t_cycle)) * (t2 % self.t_cycle)) + l_swing[1] + (
+                            (-l_swing[1] / (self.t_cycle)) * ((sim_time - t2) % self.t_cycle))
 
-            leg_pos.append([(x + x_offset), (y + y_offset), z_offset - z])
+                z = self.robot_height
+            print("answer", x, y, z)
+            # x = 0
+            # y = 0
+            # z = 0
+            # x_offset = (-l_swing[0]/self.t_cycle)*(sim_time%self.t_cycle)
+            # y_offset = (-l_swing[1]/self.t_cycle)*(sim_time%self.t_cycle)
+            # z_offset = self.robot_height
+            leg_pos.append([x, y, z])
             i=i+1
 
         print(leg_pos)
         return leg_pos
+
+
+if __name__ == '__main__':
+    body = [0.1908, 0.080]
+    legs = [0.0, 0.04, 0.100, 0.094333]
+    # initialize robot gait generator
+    beta = 0.75
+    t_cycle = 0.5
+    robot_height = 0.15
+    robot_leg = leg_IK.robot_leg(legs)
+    robot_gait = gait_generator.gait_generator(beta, t_cycle, robot_height, body, robot_leg)
