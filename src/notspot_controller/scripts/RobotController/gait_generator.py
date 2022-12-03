@@ -7,20 +7,27 @@ import numpy as np
 
 class gait_generator():
 
-    def __init__(self, beta, t_cycle, robot_height, robot_leg):
+    def __init__(self, beta, t_cycle, robot_height, robot_dimensions, robot_leg):
         # constant
         self.beta = beta
         self.t_cycle = t_cycle
         self.leg_raise_time = 0.05
         self.robot_leg = robot_leg
         self.robot_height = robot_height
+        self.robot_dimensions = robot_dimensions # [length, width]
+
+        # define leg base frame
+        l = self.robot_dimensions[0]/2
+        b = self.robot_dimensions[1]/2
+        self.l1_base = [l, b]
+        self.l2_base = [l, -b]
+        self.l3_base = [-l, -b]
+        self.l4_base = [-l, b]
 
         # updates with velocity command
         self.v_body_g = None
         self.yaw_rate = None
         self.l_stride = None
-
-
 
         self.leg_pos = None
         self.robot_body_pos = None
@@ -40,7 +47,7 @@ class gait_generator():
         if sim_time < 0:
             stance = [0.0, 0.0, self.robot_height]
             angles = []
-            for i in range(1, 5):
+            for i in range(0, 4):
                 leg_angles = self.robot_leg.inverse_kinematics(stance, i)
                 angles.append(leg_angles[0])
                 angles.append(leg_angles[1])
@@ -50,13 +57,14 @@ class gait_generator():
 
         else:
             leg_pos = self.get_leg_pos(sim_time, yaw_rate_command)
+            leg_pos = self.get_leg_rotation_offset(leg_pos, yaw_rate_command)
             angles = []
             for i in range(0, 4):
                 # if i == 1 or i == 3:
                 #     leg_pos[i][0] = -leg_pos[i][0]
                 # leg_pos[i] = np.matmul(Transformations.rotz(yaw_rate_command), leg_pos[i])
                 # print("after rotation", leg_pos[i])
-                leg_angles = self.robot_leg.inverse_kinematics(leg_pos[i], i+1)
+                leg_angles = self.robot_leg.inverse_kinematics(leg_pos[i], i)
                 angles.append(leg_angles[0])
                 angles.append(leg_angles[1])
                 angles.append(leg_angles[2])
@@ -85,6 +93,17 @@ class gait_generator():
 
         self.kinematic_phase = [leg1_phase, leg2_phase, leg3_phase, leg4_phase]
 
+    def get_leg_rotation_offset(self, leg_pose, yaw_rate):
+        new_leg_pose = []
+        for i in range(0, 4):
+            l = self.robot_dimensions[0] / 2
+            b = self.robot_dimensions[1] / 2
+            offset = [l, b, 0]
+            rotated_pose = np.matmul(Transformations.rotz(yaw_rate*(-1**((i+1)%2))), np.add(leg_pose[i], offset))
+            new_leg_pose.append(np.subtract(rotated_pose, offset))
+
+        return new_leg_pose
+
     def get_leg_pos(self, sim_time, yaw_rate):
         "gives local position which is added in to default stance"
         leg_raise_height = 0.08
@@ -101,8 +120,6 @@ class gait_generator():
             y = 0
             z = 0
 
-            rot_velocity = np.asarray([yaw_rate*((-1)**(i+1)), yaw_rate*((-1)**(i)), 0])
-
             start_phase = phase + self.beta
             end_phase = phase
 
@@ -114,7 +131,7 @@ class gait_generator():
             start_phase = start_phase + cycle_number
             end_phase = end_phase + cycle_number
 
-            l_swing = self.l_stride + rot_velocity
+            l_swing = self.l_stride
             # l_swing[0] = min(0.05, abs(l_swing[0]))*np.sign(l_swing[0])
             # l_swing[1] = min(0.05, abs(l_swing[1]))*np.sign(l_swing[1])
 

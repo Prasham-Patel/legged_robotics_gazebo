@@ -21,7 +21,7 @@ def get_robot_states(msg):
     robot_velocity_control_y.update_state(robot_state.position.y)
 
 USE_IMU = True
-RATE = 60
+RATE = 120
 
 rospy.init_node("Robot_Controller")
 
@@ -49,12 +49,12 @@ robot_velocity_control_x = trajectory.trajectory_controller(kp*3)
 robot_velocity_control_y = trajectory.trajectory_controller(kp*0.5)
 robot_yaw_control = trajectory.trajectory_controller(0.00)
 
-# initialize robot gait controller
+# initialize robot gait generator
 beta = 0.75
-t_cycle = 1.0
+t_cycle = 2
 robot_height = 0.15
 robot_leg = leg_IK.robot_leg(legs)
-robot_gait = gait_generator.gait_generator(beta, t_cycle, robot_height, robot_leg)
+robot_gait = gait_generator.gait_generator(beta, t_cycle, robot_height, body, robot_leg)
 
 command_topics = ["/notspot_controller/FR1_joint/command",
                   "/notspot_controller/FR2_joint/command",
@@ -88,6 +88,8 @@ start_time = rospy.get_time()
 # time allowed to get gazebo setup
 settling_time = 3
 
+############# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #####################
+
 while not rospy.is_shutdown():
 
     # get current_trajectory time
@@ -112,7 +114,6 @@ while not rospy.is_shutdown():
         vel_command_x = robot_velocity_control_x.get_velocity_command()
         vel_command_y = robot_velocity_control_y.get_velocity_command()
         yaw_rate_command = robot_yaw_control.get_velocity_command()
-        # yaw_rate_command = 0
 
         velocity_command = np.asarray(np.matmul(Transformations.rotz(rot.as_euler("xyz", degrees=False)[2]), np.asarray([[vel_command_x], [vel_command_y], [0]])))
         velocity_command = velocity_command.astype(float)
@@ -126,7 +127,8 @@ while not rospy.is_shutdown():
             velocity_command = [0, 0, 0]
             yaw_rate_command = 0
         print("velocity command", velocity_command)
-        velocity_command = np.asarray([[0.1], [0], [0]])
+        # velocity_command = np.asarray([[0], [0], [0]])
+        # yaw_rate_command = 0.3
         joint_angles = robot_gait.run(current_trajectory_time, velocity_command, yaw_rate_command)
     else:
         print("stance")
