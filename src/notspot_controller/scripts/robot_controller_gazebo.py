@@ -33,20 +33,22 @@ legs = [0.0, 0.04, 0.100, 0.094333]
 robot_state = None
 
 # way points, keeping staring and ending velocity 0
-waypoints = [[0, 0], [1, 0]]
-direction = [[0, 0], [0, 0]]
+waypoints = [[0, 0], [1, -1]]
+velocity = [[0, 0], [0, 0]]
 yaw = [0, 0]
 trajectory_time = 20 # in secs
 
 # initialize trajectory
-robot_trajectory_x_axis = trajectory.Trajectory(waypoints[0][0], waypoints[1][0], direction[0][0], direction[1][0], 0, trajectory_time)
-robot_trajectory_y_axis = trajectory.Trajectory(waypoints[0][1], waypoints[1][1], direction[0][1], direction[1][1], 0, trajectory_time)
+robot_trajectory_x_axis = trajectory.Trajectory(waypoints[0][0], waypoints[1][0], velocity[0][0], velocity[1][0], 0, trajectory_time)
+robot_trajectory_y_axis = trajectory.Trajectory(waypoints[0][1], waypoints[1][1], velocity[0][1], velocity[1][1], 0, trajectory_time)
 robot_trajectory_yaw = trajectory.Trajectory(yaw[0], yaw[1], 0, 0, 0, trajectory_time)
 
 #initialize controller
 kp = 0.1
 robot_velocity_control_x = trajectory.trajectory_controller(kp*3)
-robot_velocity_control_y = trajectory.trajectory_controller(kp*0.5)
+# kp needs to be negative for Y
+# cause body frame rotated 180 about x-axis
+robot_velocity_control_y = trajectory.trajectory_controller(-kp*3)
 robot_yaw_control = trajectory.trajectory_controller(0.00)
 
 # initialize robot gait generator
@@ -87,8 +89,6 @@ del RATE
 start_time = rospy.get_time()
 # time allowed to get gazebo setup
 settling_time = 3
-
-############# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #####################
 
 while not rospy.is_shutdown():
 
@@ -134,13 +134,9 @@ while not rospy.is_shutdown():
         print("stance")
         joint_angles = robot_gait.run(-1, np.asarray([0, 0]), 0)
 
-    # try:
-    # joint_angles = [0, pi/2, 0, 0, pi/2, 0, 0, pi/2, 0, 0, pi/2, 0]
     print("angles", joint_angles)
 
     for i in range(len(joint_angles)):
         publishers[i].publish(joint_angles[i])
-    # except Exception as e:
-    #     print(e)
 
     rate.sleep()

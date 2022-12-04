@@ -41,8 +41,8 @@ class gait_generator():
 
         # get kinematic phase array to time leg movement
         self.get_kinematic_phase()
-        # self.kinematic_phase[3] = self.kinematic_phase[0]
-        # self.kinematic_phase[2] = self.kinematic_phase[1]
+        self.kinematic_phase[3] = self.kinematic_phase[0]
+        self.kinematic_phase[2] = self.kinematic_phase[1]
 
         # settling time stance
         if sim_time < 0:
@@ -62,10 +62,6 @@ class gait_generator():
             print("rotated", leg_pos)
             angles = []
             for i in range(0, 4):
-                # if i == 1 or i == 3:
-                #     leg_pos[i][0] = -leg_pos[i][0]
-                # leg_pos[i] = np.matmul(Transformations.rotz(yaw_rate_command), leg_pos[i])
-                # print("after rotation", leg_pos[i])
                 leg_angles = self.robot_leg.inverse_kinematics(leg_pos[i], i)
                 angles.append(leg_angles[0])
                 angles.append(leg_angles[1])
@@ -108,7 +104,7 @@ class gait_generator():
 
     def get_leg_pos(self, sim_time, yaw_rate):
         "gives local position which is added in to default stance"
-        leg_raise_height = 0.08
+        leg_raise_height = 0.03
         leg_vz = 0.0
 
         cycle_number = floor(sim_time/self.t_cycle)
@@ -134,8 +130,6 @@ class gait_generator():
             end_phase = end_phase + cycle_number
 
             l_swing = self.l_stride*self.beta
-            # l_swing[0] = min(0.05, abs(l_swing[0]))*np.sign(l_swing[0])
-            # l_swing[1] = min(0.05, abs(l_swing[1]))*np.sign(l_swing[1])
 
             print("new lswing", l_swing)
             t0 = self.t_cycle*cycle_number
@@ -188,12 +182,6 @@ class gait_generator():
 
                 z = self.robot_height
             print("answer", x, y, z)
-            # x = 0
-            # y = 0
-            # z = 0
-            # x_offset = (-l_swing[0]/self.t_cycle)*(sim_time%self.t_cycle)
-            # y_offset = (-l_swing[1]/self.t_cycle)*(sim_time%self.t_cycle)
-            # z_offset = self.robot_height
             leg_pos.append([x, y, z])
             i=i+1
 
