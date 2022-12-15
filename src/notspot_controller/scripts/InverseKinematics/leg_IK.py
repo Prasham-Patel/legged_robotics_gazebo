@@ -14,7 +14,6 @@ class robot_leg():
         self.l4 = leg_dimension[3]
 
     def inverse_kinematics(self, pose, leg_number):
-
         i = leg_number
         x = pose[0]
 
@@ -30,15 +29,16 @@ class robot_leg():
         h = sqrt(u**2 - self.l2**2)
         theta1 = pi/2 - atan2(h, self.l2) - atan2(y, z)
         H = sqrt((x)**2 + (y - self.l2*cos(theta1))**2 + (z - self.l2*sin(theta1))**2)
+        
         D = (H ** 2 - self.l3 ** 2 - self.l4 ** 2) / (2 * self.l3 * self.l4)
+        #print (leg_number, x, y,z, self.l1, self.l2, self.l3, self.l4, theta1, D, H)
         theta3 = -atan2((sqrt(1 - D ** 2)), D)
 
         E = sqrt(H**2 - x**2)
         F = (self.l4**2 - H**2 - self.l3**2)/(2*self.l3*H)
-        print(atan2((sqrt(1 - F ** 2)), F))
-        print(atan2(x, E))
+        #print(atan2((sqrt(1 - F ** 2)), F))
+        #print(atan2(x, E))
         theta2 = pi - atan2((sqrt(1 - F ** 2)), F) - atan2(x, E)
-
 
         # if i%2 == 1:
         #     y = -pose[1]

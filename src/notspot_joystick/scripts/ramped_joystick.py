@@ -5,98 +5,90 @@ import rospy
 from math import fabs
 from numpy import array_equal
 
+import os
+from tkinter import *
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
+from pynput.keyboard import Key, Listener
 
-class PS4_controller(object):
+class PS4_controller(Tk):
     def __init__(self, rate):
+        super(PS4_controller, self).__init__()
         rospy.init_node("Joystick_ramped")
-        rospy.Subscriber("joy", Joy, self.callback)
-        self.publisher = rospy.Publisher("notspot_joy/joy_ramped", Joy, queue_size = 10)
+        self.publisher = rospy.Publisher("notspot_joy/joy_ramped", Twist, queue_size = 10)
         self.rate = rospy.Rate(rate)
-
-        # target
-        self.target_joy = Joy()
-        self.target_joy.axes = [0.,0.,1.,0.,0.,1.,0.,0.]
-        self.target_joy.buttons = [0,0,0,0,0,0,0,0,0,0,0]
-
-        # last
-        self.last_joy = Joy()
-        self.last_joy.axes = [0.,0.,1.,0.,0.,1.,0.,0.]
-        self.last_joy.buttons = [0,0,0,0,0,0,0,0,0,0,0]
-        self.last_send_time = rospy.Time.now()
 
         self.use_button = True
 
-        self.speed_index = 2
-        self.available_speeds = [0.5, 1.0, 3.0, 4.0]
+        self.speed_index = 1
+        self.available_speeds = [ -0.5, 0.0, 0.5, 1.0]
+
+        self.rot_speed_index = 0
+        self.rot_available_speeds = [0.0, 0.5, 1.0, 3.0, 4.0]
+
+        self.changed = False
+
+        self.geometry("100x100")
+        self.bind("<KeyPress>", self.keydown)
+        self.bind("<KeyRelease>", self.keyup)
+        self.sensorText = StringVar()
+        self.sensorLabel = Label(self, textvariable=self.sensorText)
+        self.sensorLabel.pack()
+        self.mainloop()
+
+
+    def keydown(self, event):
+        print(event.keysym)
+        if event.keysym == "Up":
+            self.speed_index += 1
+            if self.speed_index >= len(self.available_speeds):
+                self.speed_index = 0
+            self.changed = True
+
+        if event.keysym == "Down":
+            self.speed_index -= 1
+            if self.speed_index < 0:
+                self.speed_index = len(self.available_speeds) - 1
+            rospy.loginfo(f"Joystick speed:{self.available_speeds[self.speed_index]}")
+            self.changed = True
+
+        if event.keysym == "Left":
+            self.rot_speed_index -= 1
+            if self.rot_speed_index < 0:
+                self.rot_speed_index = len(self.rot_available_speeds) - 1
+            rospy.loginfo(f"Joystick speed:{self.rot_available_speeds[self.rot_speed_index]}")
+            self.changed = True
+        if event.keysym == "Right":
+            self.rot_speed_index += 1
+            if self.speed_index >= len(self.rot_available_speeds):
+                self.rot_speed_index = len(self.rot_speed_index) - 1
+            rospy.loginfo(f"Joystick speed:{self.rot_available_speeds[self.rot_speed_index]}")
+            self.changed = True
+
+        self.publish_joy()
+    def keyup(self, event):
+        pass
+
 
     def run(self):
         while not rospy.is_shutdown():
             self.publish_joy()
             self.rate.sleep()
 
-    def callback(self, msg):
-        if self.use_button:
-            if msg.buttons[4]:
-                self.speed_index -= 1
-                if self.speed_index < 0:
-                    self.speed_index = len(self.available_speeds) - 1
-                rospy.loginfo(f"Joystick speed:{self.available_speeds[self.speed_index]}")
-                self.use_button = False
-            elif msg.buttons[5]:
-                self.speed_index += 1
-                if self.speed_index >= len(self.available_speeds):
-                    self.speed_index = 0
-                rospy.loginfo(f"Joystick speed:{self.available_speeds[self.speed_index]}")
-                self.use_button = False
-
-        if not self.use_button:
-            if not(msg.buttons[4] or msg.buttons[5]):
-                self.use_button = True
-
-        self.target_joy.axes = msg.axes
-        self.target_joy.buttons = msg.buttons
-
-    def ramped_vel(self,v_prev,v_target,t_prev,t_now):
-        # This function was originally not written by me:
-        # https://github.com/osrf/rosbook/blob/master/teleop_bot/keys_to_twist_with_ramps.py
-        step = (t_now - t_prev).to_sec()
-        sign = self.available_speeds[self.speed_index] if \
-                (v_target > v_prev) else -self.available_speeds[self.speed_index]
-        error = fabs(v_target - v_prev)
-
-        # if we can get there within this timestep -> we're done.
-        if error < self.available_speeds[self.speed_index]*step:
-            return v_target
-        else:
-            return v_prev + sign * step # take a step toward the target
-
     def publish_joy(self):
         t_now = rospy.Time.now()
 
-        # determine changes in state
-        buttons_change = array_equal(self.last_joy.buttons, self.target_joy.buttons)
-        axes_change = array_equal(self.last_joy.axes, self.target_joy.axes)
-
         # if the desired value is the same as the last value, there's no
         # need to publish the same message again
-        if not(buttons_change and axes_change):
+        if self.changed:
             # new message
-            joy = Joy()
-            if not axes_change:
-                # do ramped_vel for every single axis
-                for i in range(len(self.target_joy.axes)): 
-                    if self.target_joy.axes[i] == self.last_joy.axes[i]:
-                        joy.axes.append(self.last_joy.axes[i])
-                    else:
-                        joy.axes.append(self.ramped_vel(self.last_joy.axes[i],
-                                self.target_joy.axes[i],self.last_send_time,t_now))
-            else:
-                joy.axes = self.last_joy.axes
-
-            joy.buttons = self.target_joy.buttons
-            self.last_joy = joy
-            self.publisher.publish(self.last_joy)
+            print("sending")
+            twist = Twist()
+            twist.linear.x = self.available_speeds[self.speed_index]
+            twist.linear.y = 0
+            twist.angular.z = 0
+            self.publisher.publish(twist)
+            self.changed = False
 
         self.last_send_time = t_now
 
