@@ -28,6 +28,8 @@ roslaunch notspot run_robot_gazebo.launch
 
 After all the nodes have started, you can click on the small TK window that pops up and control forward velocity with the up and down arrows and the rotational velocity with the left and right arrows 
 
+There is a global boolean USE_JOY that sets if the simulation follows a pre-planned trajecotry or if it will follow user input
+
 ## Credits
  - mike4192: https://github.com/mike4192/spotMicro
  - https://github.com/lnotspotl/notspot_sim_py
