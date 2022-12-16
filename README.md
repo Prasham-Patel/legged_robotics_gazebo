@@ -26,7 +26,7 @@ source devel/setup.bash
 roslaunch notspot run_robot_gazebo.launch
 ```
 
-After all the nodes have started, you can start using your joystick to control the robot.
+After all the nodes have started, you can click on the small TK window that pops up and control forward velocity with the up and down arrows and the rotational velocity with the left and right arrows 
 
 ## Credits
  - mike4192: https://github.com/mike4192/spotMicro
