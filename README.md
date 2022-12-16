@@ -16,37 +16,18 @@ roscd notspot_controller/scripts && chmod +x robot_controller_gazebo.py
 cp -r RoboticsUtilities ~/.local/lib/python3.8/site-packages
 roscd notspot_joystick/scripts && chmod +x ramped_joystick.py
 ```
+## Run
+```
+source devel/setup.bash
+roslaunch notspot simulation.launch
+```
+In another terminal
 
 ## Run
 ```
 source devel/setup.bash
 roslaunch notspot run_robot_gazebo.launch
 ```
-After all the nodes have started, you can start using your joystick to control the robot.
-
-## Controllers
-There's four different controllers, which make it easy to control the robot. These 4 controllers are: 
-Rest controller, Stand Controller, Trot gait controller and Crawl gait controller. They were all developed in
-Gazebo.
-
-### Rest Controller
-<img src="resources/1rest_controller.gif" width="400">
-
-### Stand Controller
-<img src="resources/1stand_controller.gif" width="400">
-
-### Trot Gait Controller
-<img src="resources/1trot_gait_controller.gif" width="400">
-
-### Crawl Gait Controller
-<img src="resources/1crawl_gait_controller.gif" width="400">
-
-
-## Other notes
-This is my first open-source project, so I'm not that experienced with github just yet.
-
-I'll be adding new stuff to this repository over time, so this is not the final version.
-I'd like to make all the 3D models open-source, so that anybody can build this robot at home.
 
 ## Credits
  - mike4192: https://github.com/mike4192/spotMicro
