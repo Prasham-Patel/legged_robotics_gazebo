@@ -15,11 +15,6 @@ cp -r RoboticsUtilities ~/.local/lib/python3.8/site-packages
 roscd notspot_joystick/scripts && chmod +x ramped_joystick.py
 ```
 
-## Run
-```
-source devel/setup.bash
-roslaunch notspot simulation.launch
-```
 In another terminal
 ```
 source devel/setup.bash
@@ -29,6 +24,8 @@ roslaunch notspot run_robot_gazebo.launch
 After all the nodes have started, you can click on the small TK window that pops up and control forward velocity with the up and down arrows and the rotational velocity with the left and right arrows 
 
 There is a global boolean USE_JOY that sets if the simulation follows a pre-planned trajecotry or if it will follow user input
+
+If the simulation does not change by switching USE_JOY, use this branch [cubi_poly_traj](https://github.com/Prasham-Patel/legged_robotics_gazebo/tree/cubic_poly_traj) to simulate pre-planned trajectory.
 
 ## Credits
  - mike4192: https://github.com/mike4192/spotMicro
