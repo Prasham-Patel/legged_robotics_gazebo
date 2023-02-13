@@ -27,6 +27,6 @@ There is a global boolean USE_JOY that sets if the simulation follows a pre-plan
 
 If the simulation does not change by switching USE_JOY, use this branch [cubi_poly_traj](https://github.com/Prasham-Patel/legged_robotics_gazebo/tree/cubic_poly_traj) to simulate pre-planned trajectory.
 
-## Credits
+## URDF model Credits
  - mike4192: https://github.com/mike4192/spotMicro
  - https://github.com/lnotspotl/notspot_sim_py
